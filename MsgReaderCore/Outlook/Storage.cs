@@ -463,7 +463,7 @@ public partial class Storage : IDisposable
                 return null;
 
             case PropertyType.PT_STRING8:
-                return GetStreamAsString(containerName, Encoding.Default);
+                return GetStreamAsString(containerName, TryGetEncoding(containerName));
 
             case PropertyType.PT_UNICODE:
                 return GetStreamAsString(containerName, Encoding.Unicode);
@@ -482,7 +482,7 @@ public partial class Storage : IDisposable
                 foreach (var multiValueContainerName in multiValueContainerNames)
                 {
                     var value = GetStreamAsString(multiValueContainerName,
-                        propType == PropertyType.PT_MV_STRING8 ? Encoding.Default : Encoding.Unicode);
+                        propType == PropertyType.PT_MV_STRING8 ? TryGetEncoding(multiValueContainerName) : Encoding.Unicode);
 
                     // Multi values always end with a null char, so we need to strip that one off
                     if (value.EndsWith("/0"))
@@ -681,6 +681,23 @@ public partial class Storage : IDisposable
         }
 
         _compoundFile = null;
+    }
+    #endregion
+
+    #region TryGetEncoding
+    /// <summary>
+    ///     Tries to detect the encoding of the container's stream.
+    /// </summary>
+    /// <param name="containerName"></param>
+    /// <returns>The detected encoding (or Default.Encoding when detection fails)</returns>
+    private Encoding TryGetEncoding(string containerName)
+    {
+        var detectionResult = UtfUnknown.CharsetDetector.DetectFromStream(GetStream(containerName));
+        if (detectionResult.Detected != null)
+        {
+            return detectionResult.Detected.Encoding;
+        }
+        return Encoding.Default;
     }
     #endregion
 }
